@@ -35,16 +35,59 @@
 //     console.log('server listening on port 3000');
 // });
 
+
+//var clients = io.of('/chat').clients();
+//var clients = io.of('/chat').clients('android'); // all users from room `room`
+
+
 // Setup basic express server
 var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
 var io = require('socket.io')(server);
 
-//var clients = io.of('/chat').clients();
-//var clients = io.of('/chat').clients('android'); // all users from room `room`
 
 var port = process.env.PORT || 3000;
+
+// install mysql plug in here
+// $ npm install mysql
+var mysql = require('mysql');
+var connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: '',
+    database: 'gcm_chat'
+});
+
+
+/*connection.query('SELECT 1 + 1 AS solution', function(err, rows, fields) {
+ if (err) throw err;
+
+ console.log('The solution is: ', rows[0].solution);
+ });*/
+
+/*connection.query('INSERT INTO users (`user_id`, `name`, `email`, `gcm_registration_id`, `created_at`) VALUES ('2311', 'klk', 'klk', 'klklkl', '')', function(err, rows, fields) {
+ if (err) throw err;
+
+ console.log('The solution is: ', rows[0].solution);
+ });*/
+
+
+/*var post = {user_id: '1111', socket_id: socket.id, email: 'rock@gmail.com', status: ''};
+ var query = connection.query('INSERT INTO socket_users SET ?', post, function (err, result) {
+ // Neat!
+ if (err) throw err;
+ console.log('Successfully Saved...');
+ });
+ console.log(query.sql);*/
+
+
+/* connection.ping(function (err) {
+ if (err) throw err;
+ console.log('Server responded to ping');
+ });
+ connection.end(); */
+
 
 server.listen(port, function () {
     console.log('Server listening at port %d', port);
@@ -54,28 +97,50 @@ server.listen(port, function () {
 app.use(express.static(__dirname + '/public'));
 
 // Chatroom
-
 var numUsers = 0;
 var clients = [];
 
 io.on('connection', function (socket) {
     var addedUser = false;
+    var is_Online = true;
+
     clients.push(socket);
+    console.log('one user connected: user name: ' + socket.username + "------ id : >> " + socket.id);
+    //console.log('Total User List:' + clients);
 
-    console.log('one user connected: user name:' +socket.username +" id : "+ socket.id);
-    console.log('Total User List:' + clients);
 
+    socket.on('user_registration', function (userName, email) {
+
+        console.log('User_registration Called...');
+
+        //connection.connect();
+        var post = {user_id: userName, socket_id: socket.id, email: email, status: is_Online};
+        var query = connection.query('INSERT INTO socket_users SET ?', post, function (err, result) {
+            // Neat!
+            if (err) throw err;
+            console.log('Successfully Saved User : ' + userName);
+        });
+
+        console.log(query.sql);
+        //connection.end();
+
+    });
+
+
+    // not fired..
     socket.on('connect', function (data) {
+        console.log('connect called...');
         // we tell the client to execute 'new message'
         socket.broadcast.emit('connect', {
             username: socket.username,
             numUsers: numUsers,
-            socket_id:socket.id
+            socket_id: socket.id
         });
     });
 
     // when the client emits 'new message', this listens and executes
     socket.on('new message', function (data) {
+        console.log('new message : ' + data);
         // we tell the client to execute 'new message'
         socket.broadcast.emit('new message', {
             username: socket.username,
@@ -91,19 +156,26 @@ io.on('connection', function (socket) {
         socket.username = username;
         ++numUsers;
         addedUser = true;
+
+        console.log('Add user called...');
+
         socket.emit('login', {
             numUsers: numUsers
         });
+
         // echo globally (all clients) that a person has connected
         socket.broadcast.emit('user joined', {
             username: socket.username,
             numUsers: numUsers,
-            socket_id:socket.id
+            socket_id: socket.id
         });
     });
 
     // when the client emits 'typing', we broadcast it to others
     socket.on('typing', function () {
+
+        console.log('typing called...');
+
         socket.broadcast.emit('typing', {
             username: socket.username
         });
@@ -111,16 +183,22 @@ io.on('connection', function (socket) {
 
     // when the client emits 'stop typing', we broadcast it to others
     socket.on('stop typing', function () {
+
+        console.log('stop typing...');
+
         socket.broadcast.emit('stop typing', {
             username: socket.username
         });
     });
 
+    // when want to send message to specific user
     socket.on('say to someone', function (id, msg) {
+
+        console.log('say to someone called...');
 
         socket.broadcast.to(id).emit('say to someone', {
             username: socket.username,
-            id:id,
+            id: id,
             message: msg
         });
 
