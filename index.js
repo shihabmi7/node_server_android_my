@@ -99,6 +99,7 @@ app.use(express.static(__dirname + '/public'));
 // Chatroom
 var numUsers = 0;
 var clients = [];
+var online_users = [];
 
 io.on('connection', function (socket) {
     var addedUser = false;
@@ -111,19 +112,65 @@ io.on('connection', function (socket) {
 
     socket.on('user_registration', function (userName, email) {
 
-        console.log('User_registration Called...');
+        console.log('<<<<<    User_registration Called     >>>>>>>>>');
 
-        //connection.connect();
-        var post = {user_id: userName, socket_id: socket.id, email: email, status: is_Online};
-        var query = connection.query('INSERT INTO socket_users SET ?', post, function (err, result) {
+        var is_Exists = connection.query('SELECT * FROM socket_users WHERE email = ?',[email], function (error, results) {
             // Neat!
-            if (err) throw err;
-            console.log('Successfully Saved User : ' + userName);
+            if (error) throw error;
+
+            if (results) {
+
+                console.log("not null");
+
+            }else {
+
+                console.log("null...");
+            }
+
+            console.log("select one user sql: "+is_Exists.sql);
         });
 
-        console.log(query.sql);
-        //connection.end();
+        // insert
+            /*var post = {user_id: userName, user_name:userName, socket_id: socket.id, email: email, status: is_Online};
+            var insert_query = connection.query('INSERT INTO socket_users SET ?', post, function (err, result) {
+                // Neat!
+                if (err) throw err;
+                console.log('Successfully Saved User : ' + userName +'  affectedRows  ' + result.affectedRows + ' rows');
 
+            });
+            console.log("insert sql: "+insert_query.sql);*/
+
+
+        // update
+            var update_value = {socket_id: socket.id, status: is_Online};
+            var update_query= connection.query('UPDATE socket_users SET  ? WHERE email = ?', [update_value, email], function(err, results) {
+
+                if (err) throw err;
+
+                console.log("Update sql: "+'updated successfully : '+results.affectedRows+ " row affected");
+
+            });
+            console.log(update_query.sql);
+
+        //connection.connect();
+
+        // get all online user
+        var get_online_users = connection.query('SELECT * FROM socket_users WHERE `status` = "1"',function (error, results, fields) {
+
+            if (error) throw error;
+            // online_users.push(results);
+             console.log('<<<<<    Successfully got user list :  >>>>>>>>>>' );
+
+            for (var i in results) {
+                console.log('Email Id: ', results[i].email);
+            }
+
+            // broadcast messages
+            io.emit('user_registration', results);
+
+        });
+        console.log("Select all online user sql: "+get_online_users.sql);
+        //connection.end();
     });
 
 
@@ -192,13 +239,13 @@ io.on('connection', function (socket) {
     });
 
     // when want to send message to specific user
-    socket.on('say to someone', function (id, msg) {
+    socket.on('say to someone', function (socket_id, msg) {
 
         console.log('say to someone called...');
 
-        socket.broadcast.to(id).emit('say to someone', {
+        socket.broadcast.to(socket_id).emit('say to someone', {
             username: socket.username,
-            id: id,
+            id: socket_id,
             message: msg
         });
 
