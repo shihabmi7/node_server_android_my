@@ -239,10 +239,11 @@ io.on('connection', function (socket) {
     });
 
     // when want to send message to specific user
-    socket.on('say to someone', function (socket_id, msg) {
+    socket.on('say to someone', function (socket_id, email, msg) {
 
         console.log('say to someone called...');
 
+        // get update socket from mysql then emit message to that id
         socket.broadcast.to(socket_id).emit('say to someone', {
             username: socket.username,
             id: socket_id,
@@ -254,8 +255,20 @@ io.on('connection', function (socket) {
     // when the user disconnects.. perform this
     socket.on('disconnect', function () {
 
-        clients.splice(clients.indexOf(socket), 1);
-        console.log('Disconnected... ' + socket.id);
+        //clients.splice(clients.indexOf(socket), 1);
+
+        // update status : online to offline
+        var update_value = { status: false};
+        var online_to_offline_query= connection.query('UPDATE socket_users SET  ? WHERE socket_id = ?', [update_value, socket.id], function(err, results) {
+
+            if (err) throw err;
+
+            console.log("Update sql: "+'updated successfully : '+results.affectedRows+ " row affected"+' Disconnected... ' + socket.id);
+
+        });
+        console.log(online_to_offline_query.sql);
+        //console.log('Disconnected... ' + socket.id);
+
         if (addedUser) {
             --numUsers;
             // echo globally that this client has left
