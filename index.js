@@ -131,6 +131,7 @@ io.on('connection', function (socket) {
 
                 });
                 // console.log(update_query.sql);
+                getAllOnlineUser();
 
             } else {
 
@@ -150,30 +151,18 @@ io.on('connection', function (socket) {
                     console.log('Successfully Saved New User : ' + userName + '  affectedRows  ' + result.affectedRows + ' rows');
 
                 });
+                getAllOnlineUser();
             }
 
             //console.log("select one user sql: "+is_Exists.sql);
         });
 
         //connection.connect();
-        // get all online user
-        var get_online_users = connection.query('SELECT * FROM socket_users WHERE `status` = "1"', function (error, results, fields) {
 
-            if (error) throw error;
-            // online_users.push(results);
-            console.log('<<<<<    Successfully got user list :  >>>>>>>>>>');
-            for (var i in results) {
-                console.log('Email Id: ', results[i].email);
-            }
 
-            // broadcast messages
-            io.emit('user_registration', results);
-
-        });
         // console.log("Select all online user sql: "+get_online_users.sql);
         //connection.end();
     });
-
 
     // not fired..
     socket.on('connect', function (data) {
@@ -324,15 +313,49 @@ io.on('connection', function (socket) {
 
         });
         console.log(online_to_offline_query.sql);
-        //console.log('Disconnected... ' + socket.id);
 
         if (addedUser) {
             --numUsers;
+
+            // get all online user
+            var get_online_users = connection.query('SELECT * FROM socket_users WHERE `status` = "1"', function (error, results) {
+
+                if (error) throw error;
+                // online_users.push(results);
+                console.log('<<<<<    Update  user list :  >>>>>>>>>>');
+
+                // broadcast messages
+                io.emit('user_registration', results);
+
+            });
+
             // echo globally that this client has left
             socket.broadcast.emit('user left', {
                 username: socket.username,
                 numUsers: numUsers
             });
+
         }
+
+
     });
+    // get all online user
+    function getAllOnlineUser(){
+
+        var get_online_users = connection.query('SELECT * FROM socket_users WHERE `status` = "1"', function (error, results) {
+
+            if (error) throw error;
+            // online_users.push(results);
+            console.log('<<<<<    Successfully got user list :  >>>>>>>>>>');
+            for (var i in results) {
+                console.log('Email Id: ', results[i].email);
+            }
+
+            // broadcast messages
+            io.emit('user_registration', results);
+
+        });
+
+    }
+
 });
