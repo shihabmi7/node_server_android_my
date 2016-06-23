@@ -202,13 +202,28 @@ io.on('connection', function (socket) {
 
                 if (results[0].status == "1") {
 
-                    //
                     console.log("User is online......" + socket_id + "   From DB :" + results[0].socket_id);
 
                     socket.broadcast.to(results[0].socket_id).emit('say to someone', {
                         username: socket.username,
                         id: socket_id,
                         message: msg
+                    });
+
+                    var post = {
+                        sender_mail: sender_email,
+                        receiver_mail: receiver_email,
+                        message: msg ,
+                        message_status: 1
+                        //arrival_time: is_Online
+                    };
+
+                    var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
+                        // Neat!
+                        if (err) throw err;
+
+                        console.log('Successfully Saved Online message also, sender_email ' + sender_email + '  affectedRows  ' + result.affectedRows + ' rows');
+
                     });
 
                 } else {
@@ -220,7 +235,8 @@ io.on('connection', function (socket) {
                         sender_mail: sender_email,
                         receiver_mail: receiver_email,
                         message: msg,
-                        arrival_time: is_Online
+                        message_status: 0
+
                     };
 
                     var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
