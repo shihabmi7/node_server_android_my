@@ -70,7 +70,8 @@ io.on('connection', function (socket) {
 
                 console.log("Successfully Log in : " + userName);
                 // update
-                var update_value = {socket_id: socket.id, status: is_Online};
+                var update_value = {socket_id: socket.id, 
+                    status: is_Online};
                 var update_query = connection.query('UPDATE socket_users SET  ? WHERE email = ?', [update_value, email], function (err, results) {
 
                     if (err) throw err;
@@ -220,7 +221,7 @@ io.on('connection', function (socket) {
                     var post = {
                         sender_mail: sender_email,
                         receiver_mail: receiver_email,
-                        message: msg ,
+                        message: msg,
                         message_status: 1
                         //arrival_time: is_Online
                     };
@@ -345,9 +346,9 @@ io.on('connection', function (socket) {
             if (error) throw error;
             // online_users.push(results);
             console.log('<<<<<    Successfully got user list :  >>>>>>>>>>');
-           /* for (var i in results) {
-                console.log('Email Id: ', results[i].email  +""+results[i].last_seen);
-            }*/
+            /* for (var i in results) {
+             console.log('Email Id: ', results[i].email  +""+results[i].last_seen);
+             }*/
 
             // broadcast messages
             io.emit('user_registration', results);
