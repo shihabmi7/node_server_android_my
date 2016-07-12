@@ -70,8 +70,10 @@ io.on('connection', function (socket) {
 
                 console.log("Successfully Log in : " + userName);
                 // update
-                var update_value = {socket_id: socket.id, 
-                    status: is_Online};
+                var update_value = {
+                    socket_id: socket.id,
+                    status: is_Online
+                };
                 var update_query = connection.query('UPDATE socket_users SET  ? WHERE email = ?', [update_value, email], function (err, results) {
 
                     if (err) throw err;
@@ -202,8 +204,8 @@ io.on('connection', function (socket) {
             if (error) throw error;
 
             console.log(results[0]);
-
             data = results;
+
             if (results.length > 0) {
 
                 // console.log("User is online......"+ results[0].status);
@@ -226,13 +228,7 @@ io.on('connection', function (socket) {
                         //arrival_time: is_Online
                     };
 
-                    var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
-                        // Neat!
-                        if (err) throw err;
-
-                        console.log('Successfully Saved Online message also, sender_email ' + sender_email + '  affectedRows  ' + result.affectedRows + ' rows');
-
-                    });
+                    insertMessageIntoDB(post, 1);
 
                 } else {
 
@@ -247,16 +243,10 @@ io.on('connection', function (socket) {
 
                     };
 
-                    var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
-                        // Neat!
-                        if (err) throw err;
-
-                        console.log('Successfully Saved offline message , sender_email ' + sender_email + '  affectedRows  ' + result.affectedRows + ' rows');
-
-                    });
+                    insertMessageIntoDB(post, 0);
                 }
             }
-            //console.log("select one user sql: "+is_Exists.sql);
+
         });
 
 
@@ -286,7 +276,6 @@ io.on('connection', function (socket) {
 
 
     });
-
 
     function getOffflineMessage(receiver_email) {
 
@@ -357,4 +346,19 @@ io.on('connection', function (socket) {
 
     }
 
+    function insertMessageIntoDB(post, status) {
+
+        var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
+            // Neat!
+            if (err) throw err;
+
+            if (status == 0) {
+                console.log('Successfully Saved Offline message ,  affectedRows  ' + result.affectedRows + ' rows');
+            } else {
+                console.log('Successfully Saved Online message also,  affectedRows  ' + result.affectedRows + ' rows');
+            }
+
+        });
+
+    }
 });
