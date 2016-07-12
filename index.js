@@ -58,9 +58,9 @@ io.on('connection', function (socket) {
     console.log('one user connected: user name: ' + socket.username + "------ id : >> " + socket.id);
     //console.log('Total User List:' + clients);
 
-    socket.on('user_registration', function (userName, email) {
+    socket.on('user_login_and_registration', function (userName, email) {
 
-        console.log('<<<<<    User_registration Called     >>>>>>>>>');
+        console.log('<<<<<    user_login_and_registration Called     >>>>>>>>>');
 
         var is_Exists = connection.query('SELECT * FROM socket_users WHERE email = ?', [email], function (error, results) {
             // Neat!
@@ -84,6 +84,7 @@ io.on('connection', function (socket) {
                 // console.log(update_query.sql);
                 getAllUser();
 
+
             } else {
 
                 //console.log("null...");
@@ -103,14 +104,13 @@ io.on('connection', function (socket) {
 
                 });
                 getAllUser();
+
             }
 
             //console.log("select one user sql: "+is_Exists.sql);
         });
 
         //connection.connect();
-
-
         // console.log("Select all online user sql: "+get_online_users.sql);
         //connection.end();
     });
@@ -157,16 +157,22 @@ io.on('connection', function (socket) {
             socket_id: socket.id
         });
 
-        // send offline message if any
-        // getOffflineMessage(username);
 
     });
 
-    socket.on('getOfflineMessage', function (username) {
-        if (addedUser) return;
+    socket.on('ask_for_offline_message', function (email) {
 
+        console.log('ask_for_offline_message...');
         // send offline message if any
-        getOffflineMessage(username);
+        sentOfflineMessage(email);
+
+    });
+
+    socket.on('get_chat_history', function (user_email, friend_email) {
+
+        console.log('get_chat_history...');
+        // send offline message if any
+        sentChatHistoryToMobile(user_email,friend_email);
 
     });
 
@@ -194,13 +200,11 @@ io.on('connection', function (socket) {
     socket.on('say to someone', function (sender_email, socket_id, receiver_email, msg) {
 
         console.log('say to someone called...');
-
-        // TODO : get update socket from mysql then emit message to that id
-        // TODO IF USER IS LOGGED IN THEN SEND SMS ELSE SAVE TO MYSQL
-
+        // get update socket from mysql then emit message to that id
+        // IF USER IS LOGGED IN THEN SEND SMS ELSE SAVE TO MYSQL
         var data = [];
         connection.query('SELECT * FROM socket_users WHERE email = ?', [receiver_email], function (error, results) {
-            // Neat!
+
             if (error) throw error;
 
             console.log(results[0]);
@@ -208,12 +212,9 @@ io.on('connection', function (socket) {
 
             if (results.length > 0) {
 
-                // console.log("User is online......"+ results[0].status);
-
                 if (results[0].status == "1") {
 
-                    console.log("User is online......" + socket_id + "   From DB :" + results[0].socket_id);
-
+                    // send msg to live user
                     socket.broadcast.to(results[0].socket_id).emit('say to someone', {
                         username: socket.username,
                         id: socket_id,
@@ -228,13 +229,12 @@ io.on('connection', function (socket) {
                         //arrival_time: is_Online
                     };
 
+                    // put online message to DB
                     insertMessageIntoDB(post, 1);
 
                 } else {
 
-                    // TODO  USER IS OFFLINE :(  ;  PUT THE MSG IN DB
-                    console.log("User is offline......message is saved in our DB");
-
+                    //  PUT offline MSG to DB
                     var post = {
                         sender_mail: sender_email,
                         receiver_mail: receiver_email,
@@ -248,7 +248,6 @@ io.on('connection', function (socket) {
             }
 
         });
-
 
     });
 
@@ -277,24 +276,54 @@ io.on('connection', function (socket) {
 
     });
 
-    function getOffflineMessage(receiver_email) {
+    function sentOfflineMessage(receiver_email) {
 
         var data = [];
         connection.query('SELECT * FROM socket_messages WHERE receiver_mail = ?', [receiver_email], function (error, results) {
-            // Neat!
+
             if (error) throw error;
 
-            console.log('<<<<<    Successfully got message list :  >>>>>>>>>>');
-            for (var i in results) {
-                console.log('Message:  ', results[i].message);
-            }
+            console.log('<<<<<    Successfully got messages : Total ' + results.length);
+
+            /*for (var i in results) {
+             console.log('Message:  ', results[i].message);
+             }*/
 
             // broadcast messages
-            io.emit('get_Offline_Message', results);
+            io.emit('getOfflineMessage', results);
 
         });
     }
+    function sentChatHistoryToMobile(user_email,friend_email) {
 
+        var data = "(sender_mail,receiver_mail)";
+
+        // select * from chathistory where userid in (1,2)
+        // SELECT * FROM socket_messages WHERE sender_mail in (`sender_mail`,`receiver_mail`)
+        // SELECT * FROM socket_messages WHERE sender_mail in ('sam@gmail.com','shihab@gmail.com')
+
+        // TODO : NEED TO WORK 
+        connection.query('SELECT * FROM socket_messages WHERE sender_mail in ?', [data], function (error, results) {
+
+            if (error) throw error;
+
+            console.log('<<<<<    Successfully got messages : Total ' + results.length);
+
+            /*for (var i in results) {
+             console.log('Message:  ', results[i].message);
+             }*/
+
+            // broadcast messages
+            io.emit('get_chat_history', results);
+
+        });
+
+        connection.query(sql, function(err, results) {
+            // ...
+        });
+
+
+    }
     function setStatusOfflineWhenUserLeft() {
 
         var update_value = {status: false};
@@ -308,7 +337,6 @@ io.on('connection', function (socket) {
         console.log(online_to_offline_query.sql);
 
     }
-
     // get all online user
     function getAllOnlineUser() {
 
@@ -327,7 +355,6 @@ io.on('connection', function (socket) {
         });
 
     }
-
     function getAllUser() {
 
         var get_online_users = connection.query('SELECT * FROM socket_users ', function (error, results) {
@@ -345,7 +372,6 @@ io.on('connection', function (socket) {
         });
 
     }
-
     function insertMessageIntoDB(post, status) {
 
         var insert_query = connection.query('INSERT INTO socket_messages SET ?', post, function (err, result) {
@@ -353,9 +379,9 @@ io.on('connection', function (socket) {
             if (err) throw err;
 
             if (status == 0) {
-                console.log('Successfully Saved Offline message ,  affectedRows  ' + result.affectedRows + ' rows');
+                console.log('User is Offline, Saved Offline message ,  affectedRows  ' + result.affectedRows + ' rows');
             } else {
-                console.log('Successfully Saved Online message also,  affectedRows  ' + result.affectedRows + ' rows');
+                console.log('User is Online, Saved Online message also,  affectedRows  ' + result.affectedRows + ' rows');
             }
 
         });
