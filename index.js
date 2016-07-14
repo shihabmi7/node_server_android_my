@@ -48,7 +48,7 @@ app.use(express.static(__dirname + '/public'));
 // Chatroom
 var numUsers = 0;
 var clients = [];
-var online_users = [];
+
 
 io.on('connection', function (socket) {
     var addedUser = false;
@@ -297,7 +297,7 @@ io.on('connection', function (socket) {
 
     function sentChatHistoryToMobile(user_email, friend_email) {
 
-        var data = "SELECT * FROM socket_messages WHERE  (receiver_mail='" + user_email + "' AND sender_mail='"+friend_email+"')  OR (receiver_mail= '" +friend_email+ "' AND sender_mail ='"+user_email+"') ORDER BY arrival_time";
+        var data = "SELECT * FROM socket_messages WHERE  (receiver_mail='" + user_email + "' AND sender_mail='" + friend_email + "')  OR (receiver_mail= '" + friend_email + "' AND sender_mail ='" + user_email + "') ORDER BY arrival_time";
 
         // select * from chathistory where userid in (1,2)
         // SELECT * FROM `socket_messages` WHERE (`receiver_mail` = 'sam@gmail.com' AND `sender_mail`= 'shihab@gmail.com') OR (`receiver_mail`='shihab@gmail.com' AND `sender_mail`='sam@gmail.com') ORDER BY `arrival_time` DESC
@@ -310,8 +310,8 @@ io.on('connection', function (socket) {
             console.log('<<<<<    chat_history : Total ' + results.length);
 
             for (var i in results) {
-             console.log('Message:  ', results[i].message);
-             }
+                console.log('Message:  ', results[i].message);
+            }
 
             // broadcast messages
             io.emit('get_chat_history', results);
@@ -342,7 +342,8 @@ io.on('connection', function (socket) {
         var get_online_users = connection.query('SELECT * FROM socket_users WHERE `status` = "1"', function (error, results) {
 
             if (error) throw error;
-            // online_users.push(results);
+            //online_user.push(results);
+
             console.log('<<<<<    Successfully got user list :  >>>>>>>>>>');
             // for (var i in results) {
             //     console.log('Email Id: ', results[i].email);
@@ -357,17 +358,36 @@ io.on('connection', function (socket) {
 
     function getAllUser() {
 
+        var online_user_list = [];
+
         var get_online_users = connection.query('SELECT * FROM socket_users ', function (error, results) {
 
             if (error) throw error;
-            // online_users.push(results);
-            console.log('<<<<<    Successfully got user list :  >>>>>>>>>>');
-            /* for (var i in results) {
-             console.log('Email Id: ', results[i].email  +""+results[i].last_seen);
-             }*/
+
+
+            json = JSON.stringify(results);
+
+            // console.log('<<<<<    Successfully got user list :  >' + json);
+            for (var i in results) {
+
+                // console.log('Email Id: ', results[i].email + " Last Seen: " + results[i].last_seen);
+                var online_user = {
+                    "user_id": results[i].user_id,
+                    "user_name": results[i].user_name,
+                    "email": results[i].email,
+                    "socket_id": results[i].socket_id,
+                    "status": results[i].status,
+                    "last_seen": results[i].last_seen
+                };
+
+                online_user_list.push(online_user);
+                console.log("online_user_list " + online_user_list[i].last_seen);
+            }
 
             // broadcast messages
-            io.emit('user_registration', results);
+            io.emit('user_registration', online_user_list);
+
+            // socket.send(JSON.stringify(myObject));
 
         });
 
